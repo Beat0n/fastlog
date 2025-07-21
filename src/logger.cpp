@@ -1,5 +1,6 @@
 #include "fastlog/logger.h"
 #include "fastlog/details/backend.h"
+#include "fastlog/format.h"
 #include "fastlog/sinks/sink.h"
 #include <chrono>
 #include <thread>
@@ -41,7 +42,7 @@ Logger &default_logger() {
 }
 
 void set_formatter(std::unique_ptr<formatters::Formatter> formatter) {
-    get_backend_instance().set_formatter(std::move(formatter));
+  get_backend_instance().set_formatter(std::move(formatter));
 }
 
 void add_sink_impl(std::unique_ptr<sinks::Sink> sink) {
