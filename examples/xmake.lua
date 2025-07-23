@@ -1,0 +1,5 @@
+target("example_usage")
+    set_kind("binary")
+    add_files("example_usage.cpp")
+    add_deps("fastlog")
+    set_targetdir("$(builddir)/bin")

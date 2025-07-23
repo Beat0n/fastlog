@@ -15,14 +15,14 @@ namespace formatters {
 class FlagFormatter {
 public:
   virtual ~FlagFormatter() = default;
-  virtual void format(const LogMessage &msg, std::string &dest) = 0;
+  virtual void format(const LogMessage &msg, std::string &dest) const = 0;
 };
 
 class PatternFormatter : public Formatter {
 public:
   explicit PatternFormatter(std::string pattern);
 
-  void format(const LogMessage &msg, std::string &dest) override;
+  void format(const LogMessage &msg, std::string &dest) const override;
 
 private:
   void compile_pattern(const std::string &pattern);

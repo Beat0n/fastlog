@@ -1,8 +1,8 @@
 #ifndef FASTLOG_LOG_MESSAGE_H
 #define FASTLOG_LOG_MESSAGE_H
 
-#include <chrono>
-#include <source_location> // C++20 for source location
+#include <ctime>
+#include <source_location>  // C++20 for source location
 #include <string>
 #include <thread>
 
@@ -23,7 +23,8 @@ struct noncopyable {
   noncopyable(noncopyable &&) = default;
   noncopyable &operator=(noncopyable &&) = default;
 };
-} // namespace details
+
+}  // namespace details
 
 /**
  * @enum LogLevel
@@ -39,21 +40,27 @@ enum class LogLevel : uint8_t { Trace = 0, Debug, Info, Warn, Error, Fatal };
  */
 inline constexpr std::string_view level2string(LogLevel level) {
   switch (level) {
-  case LogLevel::Trace:
-    return "TRACE";
-  case LogLevel::Debug:
-    return "DEBUG";
-  case LogLevel::Info:
-    return "INFO";
-  case LogLevel::Warn:
-    return "WARN";
-  case LogLevel::Error:
-    return "ERROR";
-  case LogLevel::Fatal:
-    return "FATAL";
+    case LogLevel::Trace:
+      return "TRACE";
+    case LogLevel::Debug:
+      return "DEBUG";
+    case LogLevel::Info:
+      return "INFO";
+    case LogLevel::Warn:
+      return "WARN";
+    case LogLevel::Error:
+      return "ERROR";
+    case LogLevel::Fatal:
+      return "FATAL";
   }
   return "UNKNOWN";
 }
+
+namespace details {
+// Declare the global log level as an external atomic variable.
+// It will be defined in logger.cpp.
+extern std::atomic<LogLevel> g_log_level;
+}  // namespace details
 
 /**
  * @struct LogMessage
@@ -64,11 +71,11 @@ inline constexpr std::string_view level2string(LogLevel level) {
  * The formatting of this message is deferred to the backend.
  */
 struct LogMessage {
-public:
+ public:
   // --- Member Variables ---
 
   // The timestamp when the log message was created.
-  std::chrono::system_clock::time_point timestamp;
+  std::time_t timestamp;
 
   // The ID of the thread that generated the log message.
   std::thread::id thread_id;
@@ -90,6 +97,6 @@ public:
   [[no_unique_address]] details::noncopyable _nocopy;
 };
 
-} // namespace fastlog
+}  // namespace fastlog
 
-#endif // FASTLOG_LOG_MESSAGE_H
+#endif  // FASTLOG_LOG_MESSAGE_H

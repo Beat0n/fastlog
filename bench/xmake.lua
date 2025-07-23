@@ -21,4 +21,14 @@ target("bench_mpmc_queue")
     add_packages("benchmark")
 
     -- After building, place the executable in the 'build/bin' directory for clarity.
-    set_targetdir("$(buildir)/bin")
+    set_targetdir("$(builddir)/bin")
+
+-- ... bench_mpmc_queue target ...
+
+-- Target for the full backend benchmark
+target("bench_backend")
+    set_kind("binary")
+    add_files("bench_backend.cpp")
+    add_deps("fastlog")
+    add_packages("benchmark", "fmt")
+    set_targetdir("$(builddir)/bin")

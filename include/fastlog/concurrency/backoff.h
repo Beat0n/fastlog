@@ -6,7 +6,7 @@
 #include <thread>
 
 #if defined(__x86_64__) || defined(_M_X64)
-#include <immintrin.h> // For _mm_pause
+#include <immintrin.h>  // For _mm_pause
 #endif
 
 namespace fastlog {
@@ -24,10 +24,8 @@ namespace concurrency {
  * duration).
  */
 class Backoff {
-public:
-  Backoff(int spin_limit = 10, int yield_limit = 20)
-      : _spin_limit(spin_limit), _yield_limit(yield_limit), _sleep_duration(1) {
-  }
+ public:
+  Backoff(int spin_limit = 10, int yield_limit = 20) : _spin_limit(spin_limit), _yield_limit(yield_limit), _sleep_duration(1) {}
 
   /**
    * @brief Execute one step of the backoff strategy. Call this in a spin-wait
@@ -57,11 +55,11 @@ public:
     _sleep_duration = std::chrono::microseconds(1);
   }
 
-private:
+ private:
   // Helper to issue a CPU-friendly pause instruction.
   static void cpu_relax() {
 #if defined(__x86_64__) || defined(_M_X64)
-    _mm_pause(); // More portable intrinsic than inline asm
+    _mm_pause();  // More portable intrinsic than inline asm
 #elif defined(__aarch64__) || defined(_M_ARM64)
     asm volatile("yield" ::: "memory");
 #else
@@ -69,8 +67,7 @@ private:
 #endif
   }
 
-  static constexpr std::chrono::microseconds kMaxSleep{
-      1000}; // Cap sleep at 1ms
+  static constexpr std::chrono::microseconds kMaxSleep{1000};  // Cap sleep at 1ms
 
   const int _spin_limit;
   const int _yield_limit;
@@ -78,7 +75,7 @@ private:
   std::chrono::microseconds _sleep_duration;
 };
 
-} // namespace concurrency
-} // namespace fastlog
+}  // namespace concurrency
+}  // namespace fastlog
 
-#endif // FASTLOG_CONCURRENCY_BACKOFF_H
+#endif  // FASTLOG_CONCURRENCY_BACKOFF_H

@@ -4,7 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <memory>
-#include <new> // For std::hardware_destructive_interference_size
+#include <new>  // For std::hardware_destructive_interference_size
 #include <type_traits>
 #include <utility>
 
@@ -17,17 +17,15 @@ namespace concurrency {
 
 template <typename T, size_t BufferSize = 8192>
 class MPMCQueue /* : public QueueBase<T> */ {
-  static_assert(BufferSize >= 2 && (BufferSize & (BufferSize - 1)) == 0,
-                "BufferSize must be a power of 2.");
+  static_assert(BufferSize >= 2 && (BufferSize & (BufferSize - 1)) == 0, "BufferSize must be a power of 2.");
 
-private:
+ private:
   // C++17 aignment specifier, provides cache line size to prevent false sharing
   // False sharing occurs when multiple threads access different variables on
   // the same cache line, causing unnecessary cache invalidations. By aligning
   // cursors to cache lines, we ensure they don't share a cache line.
 #if defined(__cpp_lib_hardware_interference_size)
-  static constexpr size_t kCachelineSize =
-      std::hardware_destructive_interference_size;
+  static constexpr size_t kCachelineSize = std::hardware_destructive_interference_size;
 #else
   static constexpr size_t kCachelineSize = 64;
 #endif
@@ -49,16 +47,14 @@ private:
   };
 
   // Correctly align cursors to prevent false sharing between them
-  alignas(
-      kCachelineSize) std::atomic<size_t> _head; // To be modified by producers
-  alignas(
-      kCachelineSize) std::atomic<size_t> _tail; // To be modified by consumers
+  alignas(kCachelineSize) std::atomic<size_t> _head;  // To be modified by producers
+  alignas(kCachelineSize) std::atomic<size_t> _tail;  // To be modified by consumers
 
   // The buffer itself. Using unique_ptr for automatic and exception-safe memory
   // management.
   std::unique_ptr<Slot[]> _buffer;
 
-public:
+ public:
   MPMCQueue() : _head(0), _tail(0) {
     // Allocate buffer using make_unique for exception safety
     _buffer = std::make_unique<Slot[]>(BufferSize);
@@ -121,18 +117,15 @@ public:
 
   MPMCQueue &operator=(MPMCQueue &&other) noexcept {
     if (this != &other) {
-      _head.store(other._head.load(std::memory_order_relaxed),
-                  std::memory_order_relaxed);
-      _tail.store(other._tail.load(std::memory_order_relaxed),
-                  std::memory_order_relaxed);
+      _head.store(other._head.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      _tail.store(other._tail.load(std::memory_order_relaxed), std::memory_order_relaxed);
       _buffer = std::exchange(other._buffer, nullptr);
     }
     return *this;
   }
 
   template <typename... Args>
-  bool emplace(Args &&...args) noexcept(
-      std::is_nothrow_constructible_v<T, Args...>) {
+  bool emplace(Args &&...args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
     size_t head = _head.load(std::memory_order_relaxed);
     while (true) {
       Slot *slot = &_buffer[head & kMask];
@@ -143,8 +136,7 @@ public:
         // This slot is available for writing. Try to claim it.
         // We use acq_rel to prevent reordering of the CAS with surrounding
         // loads/stores and to synchronize with other producers.
-        if (_head.compare_exchange_weak(head, head + 1,
-                                        std::memory_order_acq_rel)) {
+        if (_head.compare_exchange_weak(head, head + 1, std::memory_order_acq_rel)) {
           // Successfully claimed the slot. Construct the object in place.
           new (&slot->storage) T(std::forward<Args>(args)...);
           // The release store ensures that the construction of T happens-before
@@ -166,16 +158,11 @@ public:
     }
   }
 
-  bool push(T &&value) noexcept(std::is_nothrow_move_constructible_v<T>) {
-    return emplace(std::move(value));
-  }
+  bool push(T &&value) noexcept(std::is_nothrow_move_constructible_v<T>) { return emplace(std::move(value)); }
 
-  bool push(const T &value) noexcept(std::is_nothrow_copy_constructible_v<T>) {
-    return emplace(value);
-  }
+  bool push(const T &value) noexcept(std::is_nothrow_copy_constructible_v<T>) { return emplace(value); }
 
-  bool pop(T &result) noexcept(std::is_nothrow_move_assignable_v<T> ||
-                               std::is_nothrow_copy_assignable_v<T>) {
+  bool pop(T &result) noexcept(std::is_nothrow_move_assignable_v<T> || std::is_nothrow_copy_assignable_v<T>) {
     size_t tail = _tail.load(std::memory_order_relaxed);
     while (true) {
       Slot *slot = &_buffer[tail & kMask];
@@ -185,8 +172,7 @@ public:
       if (diff == 0) {
         // This slot is ready for reading. Try to claim it.
         // We use acq_rel to synchronize with other consumers.
-        if (_tail.compare_exchange_weak(tail, tail + 1,
-                                        std::memory_order_acq_rel)) {
+        if (_tail.compare_exchange_weak(tail, tail + 1, std::memory_order_acq_rel)) {
           // Successfully claimed the slot.
           T *data_ptr = std::launder(reinterpret_cast<T *>(&slot->storage));
 
@@ -213,9 +199,16 @@ public:
       }
     }
   }
+
+  bool is_empty() const {
+    // For a multi-consumer queue, this is a best-effort check.
+    // The state can change immediately after the check.
+    // It's useful for draining logic.
+    return _tail.load(std::memory_order_acquire) >= _head.load(std::memory_order_acquire);
+  }
 };
 
-} // namespace concurrency
-} // namespace fastlog
+}  // namespace concurrency
+}  // namespace fastlog
 
-#endif // FASTLOG_CONCURRENCY_MPMC_QUEUE_H
+#endif  // FASTLOG_CONCURRENCY_MPMC_QUEUE_H

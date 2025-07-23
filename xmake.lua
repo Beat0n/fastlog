@@ -7,7 +7,7 @@ set_languages("c++20")
 add_requires("fmt")
 
 -- Add default build modes (debug, release)
-add_rules("mode.debug", "mode.release")
+add_rules("mode.debug", "mode.release", {public = true})
 
 -- Set the output directory for all build artifacts (binaries, libraries, etc.)
 -- This keeps the source tree clean.
@@ -17,7 +17,7 @@ target("fastlog")
     -- 1. 库的类型"static"
     set_kind("static")
 
-    add_packages("fmt")
+    add_packages("fmt", {public = true})
 
     -- 添加所有需要编译的源文件
     -- 我们使用通配符来包含 src/ 及其所有子目录下的 .cpp 文件

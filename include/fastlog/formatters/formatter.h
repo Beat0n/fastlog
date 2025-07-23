@@ -18,7 +18,7 @@ public:
    * @param dest The destination string to append the formatted output to.
    *             Appending to a string avoids repeated allocations.
    */
-  virtual void format(const LogMessage &msg, std::string &dest) = 0;
+  virtual void format(const LogMessage &msg, std::string &dest) const = 0;
 };
 
 } // namespace formatters

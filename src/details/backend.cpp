@@ -1,27 +1,31 @@
 #include "fastlog/details/backend.h"
-#include "fastlog/concurrency/backoff.h"
-#include "fastlog/formatters/formatter.h"
-#include "fastlog/formatters/pattern_formatter.h"
-#include "fastlog/sinks/sink.h"
+
+#include <unistd.h>
+
+#include <atomic>
+#include <thread>
 #include <utility>
+
+#include "fastlog/concurrency/backoff.h"
+#include "fastlog/formatters/pattern_formatter.h"
 
 namespace fastlog {
 namespace details {
 
-Backend::Backend()
-    : _active(true),
-      _queue(std::make_unique<concurrency::MPMCQueue<LogMessage>>()) {
+Backend::Backend() : _active(true), _queue(std::make_unique<concurrency::MPMCQueue<LogMessage>>()), _format_buffer() {
   // Set a default formatter. This requires the full definition of
   // PatternFormatter.
-  _formatter = std::make_unique<formatters::PatternFormatter>(
-      "[%Y-%m-%d %H:%M:%S.%f] [%l] [%t] %v");
-  _worker_thread = concurrency::ScopedThread([this]() { this->worker_loop(); });
+  _formatter = std::make_unique<formatters::PatternFormatter>("%^[%Y-%M-%D %H:%M:%S] [%T] [%F:%l %f] %v");
+  std::atomic_signal_fence(std::memory_order_seq_cst);
+  _worker_thread = std::thread([this]() { this->worker_loop(); });
 }
 
 // The destructor needs the full definition of Formatter to destroy _formatter.
 Backend::~Backend() {
-  _active.store(false, std::memory_order_relaxed);
-  // The ScopedThread destructor will automatically join the thread.
+  _active.store(false, std::memory_order_release);
+  if (_worker_thread.joinable()) {
+    _worker_thread.join();
+  }
 }
 
 void Backend::add_sink(std::unique_ptr<sinks::Sink> sink) {
@@ -49,14 +53,13 @@ void Backend::log(LogMessage &&message) {
 void Backend::worker_loop() {
   concurrency::Backoff backoff;
 
-  while (_active.load(std::memory_order_relaxed)) {
+  while (_active.load(std::memory_order_acquire)) {
     LogMessage msg;
     if (_queue->pop(msg)) {
-      backoff.reset(); // Success, reset backoff
+      backoff.reset();  // Success, reset backoff
 
       // Format and sink the message.
-      _format_buffer.clear(); // Reuse the buffer to avoid allocations
-
+      _format_buffer.clear();  // Reuse the buffer to avoid allocations
       // This call needs the full definition of Formatter for the virtual
       // dispatch.
       _formatter->format(msg, _format_buffer);
@@ -86,5 +89,5 @@ void Backend::worker_loop() {
   }
 }
 
-} // namespace details
-} // namespace fastlog
+}  // namespace details
+}  // namespace fastlog

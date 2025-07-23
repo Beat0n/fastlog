@@ -1,31 +1,22 @@
 #ifndef FASTLOG_DETAILS_BACKEND_H
 #define FASTLOG_DETAILS_BACKEND_H
 
-#include "fastlog/concurrency/mpmc_queue.h"
-#include "fastlog/concurrency/scoped_thread.h"
-#include "fastlog/log_message.h"
 #include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
-// --- Correct Forward Declaration ---
-// We only need to know that these classes exist to use a unique_ptr to them.
-// The full definition is only needed in the .cpp file.
-namespace fastlog {
-namespace sinks {
-class Sink;
-}
-namespace formatters {
-class Formatter;
-}
-} // namespace fastlog
+#include "fastlog/concurrency/mpmc_queue.h"
+#include "fastlog/formatters/formatter.h"
+#include "fastlog/log_message.h"
+#include "fastlog/sinks/sink.h"
 
 namespace fastlog {
 namespace details {
 
 class Backend {
-public:
+ public:
   Backend();
   ~Backend();
 
@@ -43,10 +34,10 @@ public:
 
   void log(LogMessage &&message);
 
-private:
+ private:
   void worker_loop();
 
-  concurrency::ScopedThread _worker_thread;
+  std::thread _worker_thread;
   std::atomic<bool> _active;
 
   std::unique_ptr<concurrency::MPMCQueue<LogMessage>> _queue;
@@ -56,10 +47,10 @@ private:
   // member.
   std::unique_ptr<formatters::Formatter> _formatter;
 
-  std::string _format_buffer; // A reusable buffer for formatting
+  std::string _format_buffer;  // A reusable buffer for formatting
 };
 
-} // namespace details
-} // namespace fastlog
+}  // namespace details
+}  // namespace fastlog
 
-#endif // FASTLOG_DETAILS_BACKEND_H
+#endif  // FASTLOG_DETAILS_BACKEND_H
